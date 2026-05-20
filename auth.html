@@ -86,7 +86,7 @@ function onGSIResponse(response) {
   token:     urlToken,
   date:      urlDate,
   email:     payload.email,
-  name: encodeURIComponent(payload.name || ''),
+  name: Array.from(payload.name || '').map(function(c){ return c.charCodeAt(0); }).join(','),
   googleId:  payload.sub,
   photoURL:  payload.picture || ''
 });
