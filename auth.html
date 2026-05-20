@@ -86,7 +86,7 @@ function onGSIResponse(response) {
   token:     urlToken,
   date:      urlDate,
   email:     payload.email,
-  name:      btoa(unescape(encodeURIComponent(payload.name || ''))),
+  name: encodeURIComponent(payload.name || ''),
   googleId:  payload.sub,
   photoURL:  payload.picture || ''
 });
