@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>출석 체크 로그인</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,::before,::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:#f5f4f1;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:24px;padding:40px 32px;width:100%;max-width:380px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07),0 8px 24px rgba(0,0,0,.06);border:1px solid #e5e7eb;text-align:center}
+.icon{font-size:48px;margin-bottom:16px}
+h1{font-size:22px;font-weight:900;letter-spacing:-.03em;margin-bottom:8px;color:#111827}
+.sub{font-size:14px;color:#6b7280;margin-bottom:28px;line-height:1.6}
+.cafe-badge{display:inline-flex;align-items:center;gap:6px;background:#eef2ff;color:#4f46e5;
+  font-size:12px;font-weight:700;padding:5px 12px;border-radius:100px;margin-bottom:20px}
+#gsi-wrap{display:flex;justify-content:center;margin-bottom:16px}
+.notice{font-size:11px;color:#9ca3af;line-height:1.6}
+.ld{display:none;flex-direction:column;align-items:center;gap:12px}
+.ld-spin{width:32px;height:32px;border-radius:50%;border:3px solid rgba(79,70,229,.12);
+  border-top-color:#4f46e5;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ld-txt{font-size:14px;color:#6b7280}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">📚</div>
+  <div class="cafe-badge" id="cafe-badge">✦ StudyCafe</div>
+  <h1>출석 체크 로그인</h1>
+  <p class="sub">구글 계정으로 로그인하면<br>출석 체크 페이지로 이동합니다.</p>
+  <div id="gsi-wrap"></div>
+  <div class="ld" id="ld">
+    <div class="ld-spin"></div>
+    <div class="ld-txt">로그인 처리 중...</div>
+  </div>
+  <p class="notice">로그인 정보는 출석 기록에만 사용됩니다.</p>
+</div>
+
+<script>
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQbwTVvf31E-0gCrGZQoNo-2TD9JQrVnbS7Ux_nrZPtY33xKlzeYx4X0kjKMPOde9aHA/exec';
+var GSI_CLIENT_ID   = '477063853742-6uqsloh4lnrr24en4ajt7ju5nhcf0vp1.apps.googleusercontent.com';
+
+// URL 파라미터에서 token, date, cafeName 읽기
+function qp(name) {
+  return new URLSearchParams(window.location.search).get(name) || '';
+}
+
+var urlToken  = qp('token');
+var urlDate   = qp('date');
+var cafeName  = qp('cafe') || 'StudyCafe';
+
+document.getElementById('cafe-badge').textContent = '✦ ' + cafeName;
+document.title = '출석 로그인 — ' + cafeName;
+
+// GSI 초기화
+function initGSI() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    setTimeout(initGSI, 300);
+    return;
+  }
+  google.accounts.id.initialize({
+    client_id: GSI_CLIENT_ID,
+    callback: onGSIResponse,
+    auto_select: false
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('gsi-wrap'),
+    { theme: 'outline', size: 'large', width: 300, locale: 'ko', text: 'signin_with' }
+  );
+}
+
+function onGSIResponse(response) {
+  document.getElementById('gsi-wrap').style.display = 'none';
+  document.getElementById('ld').style.display = 'flex';
+
+  var parts = response.credential.split('.');
+  try {
+    var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    // Apps Script Checkin 페이지로 리다이렉트 (사용자 정보 포함)
+ var params = new URLSearchParams({
+  page:      'checkin',
+  token:     urlToken,
+  date:      urlDate,
+  email:     payload.email,
+  googleId:  payload.sub,
+  photoURL:  payload.picture || ''
+});
+    window.location.href = APPS_SCRIPT_URL + '?' + params.toString();
+  } catch(e) {
+    alert('로그인 처리 오류: ' + e.message);
+    document.getElementById('gsi-wrap').style.display = 'flex';
+    document.getElementById('ld').style.display = 'none';
+  }
+}
+
+window.addEventListener('load', initGSI);
+</script>
+</body>
+</html>
