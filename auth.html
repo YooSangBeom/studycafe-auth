@@ -81,15 +81,15 @@ function onGSIResponse(response) {
   try {
     var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
     // Apps Script Checkin 페이지로 리다이렉트 (사용자 정보 포함)
-    var params = new URLSearchParams({
-      page:      'checkin',
-      token:     urlToken,
-      date:      urlDate,
-      email:     payload.email,
-      name:      payload.name || '',
-      googleId:  payload.sub,
-      photoURL:  payload.picture || ''
-    });
+ var params = new URLSearchParams({
+  page:      'checkin',
+  token:     urlToken,
+  date:      urlDate,
+  email:     payload.email,
+  name:      btoa(unescape(encodeURIComponent(payload.name || ''))),
+  googleId:  payload.sub,
+  photoURL:  payload.picture || ''
+});
     window.location.href = APPS_SCRIPT_URL + '?' + params.toString();
   } catch(e) {
     alert('로그인 처리 오류: ' + e.message);
