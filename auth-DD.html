@@ -24,10 +24,27 @@ h1{font-size:22px;font-weight:900;letter-spacing:-.03em;margin-bottom:8px;color:
   border-top-color:#4f46e5;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .ld-txt{font-size:14px;color:#6b7280}
+
+/* 브라우저 안내 카드 */
+.browser-card{background:#fff;border-radius:24px;padding:36px 28px;width:100%;max-width:380px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07),0 8px 24px rgba(0,0,0,.06);border:1px solid #e5e7eb;text-align:center}
+.browser-icon{font-size:52px;margin-bottom:14px}
+.browser-title{font-size:20px;font-weight:900;color:#111827;margin-bottom:8px}
+.browser-sub{font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px}
+.browser-guide{background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;
+  padding:16px;font-size:12px;color:#374151;line-height:1.9;text-align:left;margin-bottom:20px}
+.browser-guide b{color:#111827}
+.browser-btn{width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;
+  border-radius:14px;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+  cursor:pointer;margin-bottom:10px}
+.browser-btn-sub{width:100%;padding:11px;background:transparent;color:#9ca3af;border:none;
+  font-size:12px;font-family:'Noto Sans KR',sans-serif;cursor:pointer}
 </style>
 </head>
 <body>
-<div class="card">
+
+<!-- 로그인 카드 (기본) -->
+<div class="card" id="login-card">
   <div class="icon">📚</div>
   <div class="cafe-badge" id="cafe-badge">✦ StudyCafe</div>
   <h1>출석 체크 로그인</h1>
@@ -40,23 +57,82 @@ h1{font-size:22px;font-weight:900;letter-spacing:-.03em;margin-bottom:8px;color:
   <p class="notice">로그인 정보는 출석 기록에만 사용됩니다.</p>
 </div>
 
+<!-- 브라우저 안내 카드 (인앱 브라우저 감지 시) -->
+<div class="browser-card" id="browser-card" style="display:none">
+  <div class="browser-icon">🌐</div>
+  <div class="browser-title">Chrome으로 열어주세요</div>
+  <p class="browser-sub">
+    현재 브라우저에서는 구글 로그인이<br>
+    제한될 수 있습니다.<br>
+    <b>Chrome 또는 Safari</b>로 열어주세요.
+  </p>
+  <div class="browser-guide">
+    <b>📱 아이폰 (Safari)</b><br>
+    하단 공유 버튼 → Safari로 열기<br><br>
+    <b>📱 안드로이드 (Chrome)</b><br>
+    우측 상단 ⋮ 메뉴 → Chrome으로 열기<br>
+    또는 주소 복사 후 Chrome에서 붙여넣기
+  </div>
+  <button class="browser-btn" onclick="tryOpenExternal()">외부 브라우저로 열기</button>
+  <button class="browser-btn-sub" onclick="showLoginAnyway()">그냥 로그인 시도하기</button>
+</div>
+
 <script>
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrRXy6A5_Zky13whV46cx3-1Jhp6FbPcbjUwsJkmxjHEj9atZZJStArTlyBgZ72xg8LQ/exec';
 var GSI_CLIENT_ID   = '477063853742-6uqsloh4lnrr24en4ajt7ju5nhcf0vp1.apps.googleusercontent.com';
 
-// URL 파라미터에서 token, date, cafeName 읽기
 function qp(name) {
   return new URLSearchParams(window.location.search).get(name) || '';
 }
 
-var urlToken  = qp('token');
-var urlDate   = qp('date');
-var cafeName  = qp('cafe') || 'StudyCafe';
+var urlToken = qp('token');
+var urlDate  = qp('date');
+var cafeName = qp('cafe') || 'StudyCafe';
 
 document.getElementById('cafe-badge').textContent = '✦ ' + cafeName;
 document.title = '출석 로그인 — ' + cafeName;
 
-// GSI 초기화
+// 인앱 브라우저 감지
+function isInAppBrowser() {
+  var ua = navigator.userAgent.toLowerCase();
+  return /naver|kakaotalk|line|instagram|fban|fbav|twitter|wechat|samsungbrowser/.test(ua);
+}
+
+// 외부 브라우저로 열기 시도
+function tryOpenExternal() {
+  var url = location.href;
+  // intent 방식 (안드로이드)
+  if (/android/.test(navigator.userAgent.toLowerCase())) {
+    location.href = 'intent://' + url.replace(/https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+  } else {
+    // iOS - 그냥 현재 URL 복사 안내
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(function() {
+        alert('주소가 복사되었습니다!\nChrome 또는 Safari 주소창에 붙여넣기 해주세요.');
+      });
+    } else {
+      alert('주소창의 URL을 복사해서\nChrome 또는 Safari에서 열어주세요.\n\n' + url);
+    }
+  }
+}
+
+// 그냥 로그인 시도
+function showLoginAnyway() {
+  document.getElementById('browser-card').style.display = 'none';
+  document.getElementById('login-card').style.display = 'block';
+  initGSI();
+}
+
+// 페이지 로드 시 브라우저 체크
+window.addEventListener('load', function() {
+  if (isInAppBrowser()) {
+    document.getElementById('login-card').style.display = 'none';
+    document.getElementById('browser-card').style.display = 'block';
+  } else {
+    initGSI();
+  }
+});
+
 function initGSI() {
   if (typeof google === 'undefined' || !google.accounts) {
     setTimeout(initGSI, 300);
@@ -76,19 +152,17 @@ function initGSI() {
 function onGSIResponse(response) {
   document.getElementById('gsi-wrap').style.display = 'none';
   document.getElementById('ld').style.display = 'flex';
-
   var parts = response.credential.split('.');
   try {
     var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    // Apps Script Checkin 페이지로 리다이렉트 (사용자 정보 포함)
- var params = new URLSearchParams({
-  page:      'checkin',
-  token:     urlToken,
-  date:      urlDate,
-  email:     payload.email,
-  googleId:  payload.sub,
-  photoURL:  payload.picture || ''
-});
+    var params = new URLSearchParams({
+      page:     'checkin',
+      token:    urlToken,
+      date:     urlDate,
+      email:    payload.email,
+      googleId: payload.sub,
+      photoURL: payload.picture || ''
+    });
     window.location.href = APPS_SCRIPT_URL + '?' + params.toString();
   } catch(e) {
     alert('로그인 처리 오류: ' + e.message);
@@ -96,8 +170,6 @@ function onGSIResponse(response) {
     document.getElementById('ld').style.display = 'none';
   }
 }
-
-window.addEventListener('load', initGSI);
 </script>
 </body>
 </html>
